@@ -61,6 +61,13 @@ class Settings(BaseSettings):
     # 应用配置
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     max_review_retries: int = Field(default=2, alias="MAX_REVIEW_RETRIES")
+    planner_use_llm: Literal["auto", "always", "never"] = Field(
+        default="auto", alias="PLANNER_USE_LLM"
+    )
+    reviewer_use_llm: Literal["auto", "always", "never"] = Field(
+        default="auto", alias="REVIEWER_USE_LLM"
+    )
+    retrieval_merge_queries: bool = Field(default=True, alias="RETRIEVAL_MERGE_QUERIES")
 
     def configure_tracing(self) -> None:
         """配置完成后启用 LangSmith 追踪。"""

@@ -9,6 +9,13 @@ from health_assistant.schemas.agent_io import PlannerOutput
 from health_assistant.schemas.user_profile import UserProfile
 from health_assistant.utils.llm_factory import invoke_llm_json
 
+# 规则规划可识别的明确意图关键词
+_CLEAR_INTENT_KEYWORDS = (
+    "增肌", "减脂", "减肥", "减重", "蛋白", "热量", "卡路里", "kcal",
+    "BMI", "bmi", "训练", "饮食", "膳食", "营养", "补水", "碳水", "脂肪",
+    "muscle", "bulk", "lose", "calorie", "protein",
+)
+
 
 class PlannerAgent(BaseAgent):
     prompt_name = "planner"
@@ -19,20 +26,23 @@ class PlannerAgent(BaseAgent):
         profile: Optional[UserProfile] = None,
     ) -> PlannerOutput:
         profile = profile or UserProfile()
-        prompts = self.prompt
-        user = prompts["user_template"].format(
-            query=query,
-            profile=json.dumps(profile.to_context(), ensure_ascii=False),
-        )
-        if self.settings.deepseek_api_key:
+        rule_plan = self._rule_based_plan(query, profile)
+
+        use_llm = self._should_use_llm(query, rule_plan)
+        if use_llm:
+            prompts = self.prompt
+            user = prompts["user_template"].format(
+                query=query,
+                profile=json.dumps(profile.to_context(), ensure_ascii=False),
+            )
             data = invoke_llm_json(
                 self.llm,
                 prompts["system"],
                 user,
-                fallback=self._rule_based_plan(query, profile),
+                fallback=rule_plan,
             )
         else:
-            data = self._rule_based_plan(query, profile)
+            data = rule_plan
 
         return PlannerOutput(
             intent=data.get("intent", "general_health"),
@@ -44,16 +54,34 @@ class PlannerAgent(BaseAgent):
             ),
         )
 
+    def _should_use_llm(self, query: str, rule_plan: dict[str, Any]) -> bool:
+        mode = self.settings.planner_use_llm
+        if mode == "never":
+            return False
+        if mode == "always":
+            return bool(self.settings.deepseek_api_key)
+        # auto：意图明确则跳过 LLM
+        if not self.settings.deepseek_api_key:
+            return False
+        return not self._is_clear_intent(query, rule_plan)
+
+    def _is_clear_intent(self, query: str, rule_plan: dict[str, Any]) -> bool:
+        q = query.lower()
+        if any(kw.lower() in q or kw in query for kw in _CLEAR_INTENT_KEYWORDS):
+            return True
+        return rule_plan.get("intent") not in ("general_health", "", None)
+
     def _rule_based_plan(self, query: str, profile: UserProfile) -> dict[str, Any]:
-        """LLM 不可用时的规则兜底规划。"""
+        """规则兜底规划。"""
         entities = self._extract_entities(query)
         merged = profile.merge_from_entities(entities)
         intent = "general_health"
-        q_lower = query.lower()
         if any(k in query for k in ("增肌", "muscle", "bulk", "蛋白")):
             intent = "muscle_gain_nutrition"
-        elif any(k in query for k in ("减肥", "减重", "lose")):
+        elif any(k in query for k in ("减肥", "减重", "lose", "减脂")):
             intent = "weight_loss"
+        elif any(k in query for k in ("热量", "卡路里", "kcal", "TDEE")):
+            intent = "calorie_nutrition"
         return {
             "intent": intent,
             "subtasks": ["retrieve_guideline", "calc_metrics", "generate_advice"],
@@ -76,9 +104,4 @@ class PlannerAgent(BaseAgent):
         return entities
 
     def _default_retrieval_queries(self, query: str) -> list[str]:
-        queries = [query]
-        if "蛋白" in query:
-            queries.append("增肌 蛋白质 摄入量 推荐 g/kg")
-        if "热量" in query or "卡路里" in query:
-            queries.append("每日总热量 膳食指南 推荐")
-        return queries
+        return [query]

@@ -1,0 +1,11 @@
+nutrient,unit,male_adult_rni,female_adult_rni,note
+energy,kcal,2250,1800,轻体力活动参考
+protein,g,65,55,一般成年人RNI
+carbohydrate,g,300,250,供能比50-65%
+fat,g,60,50,供能比20-30%
+calcium,mg,800,800,每日推荐
+iron,mg,12,20,每日推荐
+zinc,mg,12.5,7.5,每日推荐
+vitamin_c,mg,100,100,每日推荐
+water,ml,1700,1500,每日饮水参考
+daily_recommended_intake,reference,2250,1800,每日推荐摄入量 能量 蛋白质 碳水化合物 脂肪 参考

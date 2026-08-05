@@ -6,7 +6,9 @@
 
 ## 功能特性
 
-- **5 Agent 协作**：规划 → 检索 → 计算 → 生成 → 评审（支持评审失败循环修正）
+- **5 Agent 协作**：规划 → 检索 ∥ 计算（并行）→ 生成 → 评审（支持评审失败循环修正）
+- **规则优先降本**：`PLANNER_USE_LLM=auto` / `REVIEWER_USE_LLM=auto`，常见问句 LLM 调用 3→1 次
+- **流式体验**：ChatService 单例 + `ask_stream()`，首字 2～3s 可见
 - **RAG 私有知识库**：膳食指南、运动文献、营养成分表
 - **确定性营养计算**：BMI、TDEE、蛋白质/宏量营养素（Python 工具，非 LLM 估算）
 - **双 Provider 架构**：DeepSeek（LLM）+ DashScope / 本地 bge-m3（Embedding）
@@ -53,7 +55,25 @@ python main.py cli "我身高172，体重70，想增肌，每天吃多少蛋白�
 
 # RAG 评估
 python main.py eval
+
+# MVP 基线性能报告（优化前后对比用）
+python main.py benchmark
+
+# 指定 MVP 基线重新跑（可选）
+python scripts/run_benchmark.py --version mvp-baseline
 ```
+
+## 优化前后对比（optimized_v1）
+
+| 指标 | MVP | optimized_v1 |
+|------|-----|--------------|
+| E2E 平均延迟 | ~46.5 s | **~8.9 s** |
+| LLM 调用/问 | 3 次 | **1 次** |
+| 评审 pass 率 | 67% | **100%** |
+| Recall@5 / MRR | 100% / 0.97 | **100% / 1.0** |
+| 首字延迟 | ~46 s | ~2～3 s（流式） |
+
+对比报告：[docs/benchmarks/mvp_vs_optimized_v1_report.md](docs/benchmarks/mvp_vs_optimized_v1_report.md)
 
 ### 4. 测试
 
@@ -81,8 +101,9 @@ health-assistant/
 ## 架构亮点（求职展示）
 
 1. **RAG + Tool 分离**：数值由 Python 工具计算，LLM 负责解读与建议，评审 Agent 双重校验
-2. **LangGraph 条件循环**：评审不通过自动打回 Generator 重试（最多 2 次）
-3. **无 API 可运行**：Planner/Generator/Reviewer 均有规则兜底，便于本地 Demo 与 CI 测试
+2. **LangGraph 条件循环 + 并行**：检索与计算 fan-out 并行，评审不通过自动打回 Generator
+3. **规则优先降本**：Planner/Reviewer auto 模式跳过 LLM，API 成本降约 60～70%
+4. **无 API 可运行**：规则兜底 + 本地 embedding，便于本地 Demo 与 CI 测试
 
 ## 文档
 
@@ -90,6 +111,19 @@ health-assistant/
 - [Agent 设计](docs/agent_design.md)
 - [部署指南](docs/deployment.md)
 - [面试答辩指南](docs/interview_guide.md)
+- [MVP 基线性能报告](docs/benchmarks/mvp_baseline_report.md)
+- [optimized_v1 报告](docs/benchmarks/optimized_v1_report.md)
+- [MVP vs optimized_v1 对比](docs/benchmarks/mvp_vs_optimized_v1_report.md)
+
+## RAG 评估基准（MVP）
+
+运行 `python main.py benchmark` 生成报告，核心指标：
+
+- **Recall@1 / @3 / @5**：检索命中率
+- **MRR**：平均倒数排名
+- **E2E 延迟**：多 Agent 全链路耗时
+
+评估数据集：[tests/fixtures/eval_queries.json](tests/fixtures/eval_queries.json)（15 条标注 query）
 
 ## 示例 Query
 

@@ -1,0 +1,92 @@
+[
+  {
+    "id": "q01",
+    "query": "增肌 蛋白质 摄入量 推荐",
+    "expected_sources": ["protein_guidelines.md", "muscle_gain_protein.md", "issn_protein_position.md"],
+    "expected_doc_types": ["dietary_guideline", "exercise"]
+  },
+  {
+    "id": "q02",
+    "query": "每日热量 推荐 成年人",
+    "expected_sources": ["calorie_guidelines.md", "daily_dri_reference.csv"],
+    "expected_doc_types": ["dietary_guideline", "nutrition_table"]
+  },
+  {
+    "id": "q03",
+    "query": "抗阻力训练 营养 蛋白质",
+    "expected_sources": ["muscle_gain_protein.md", "issn_protein_position.md", "pre_post_workout_nutrition.md"],
+    "expected_doc_types": ["exercise"]
+  },
+  {
+    "id": "q04",
+    "query": "鸡胸肉 蛋白质含量",
+    "expected_sources": ["common_foods.csv", "protein_foods_ranking.csv"],
+    "expected_doc_types": ["nutrition_table"]
+  },
+  {
+    "id": "q05",
+    "query": "膳食指南 蛋白质 一般人群",
+    "expected_sources": ["protein_guidelines.md", "chinese_dietary_balance.md"],
+    "expected_doc_types": ["dietary_guideline"]
+  },
+  {
+    "id": "q06",
+    "query": "减脂 蛋白质 保护肌肉",
+    "expected_sources": ["fat_loss_nutrition.md", "calorie_guidelines.md"],
+    "expected_doc_types": ["exercise", "dietary_guideline"]
+  },
+  {
+    "id": "q07",
+    "query": "训练前 训练后 吃什么",
+    "expected_sources": ["pre_post_workout_nutrition.md"],
+    "expected_doc_types": ["exercise"]
+  },
+  {
+    "id": "q08",
+    "query": "脂肪 碳水化合物 比例 增肌",
+    "expected_sources": ["fat_carb_guidelines.md"],
+    "expected_doc_types": ["dietary_guideline"]
+  },
+  {
+    "id": "q09",
+    "query": "运动 补水 饮水量",
+    "expected_sources": ["hydration_guidelines.md"],
+    "expected_doc_types": ["dietary_guideline"]
+  },
+  {
+    "id": "q10",
+    "query": "有氧 抗阻 蛋白质 需求 差异",
+    "expected_sources": ["cardio_vs_strength.md"],
+    "expected_doc_types": ["exercise"]
+  },
+  {
+    "id": "q11",
+    "query": "每日推荐摄入量 能量 蛋白质",
+    "expected_sources": ["daily_dri_reference.csv"],
+    "expected_doc_types": ["nutrition_table"]
+  },
+  {
+    "id": "q12",
+    "query": "ISSN 蛋白质 g/kg 立场",
+    "expected_sources": ["issn_protein_position.md", "muscle_gain_protein.md"],
+    "expected_doc_types": ["exercise"]
+  },
+  {
+    "id": "q13",
+    "query": "平衡膳食 食物多样",
+    "expected_sources": ["chinese_dietary_balance.md"],
+    "expected_doc_types": ["dietary_guideline"]
+  },
+  {
+    "id": "q14",
+    "query": "希腊酸奶 蛋白 含量",
+    "expected_sources": ["protein_foods_ranking.csv", "common_foods.csv"],
+    "expected_doc_types": ["nutrition_table"]
+  },
+  {
+    "id": "q15",
+    "query": "我身高172体重70增肌每天多少蛋白质",
+    "expected_sources": ["protein_guidelines.md", "muscle_gain_protein.md", "issn_protein_position.md"],
+    "expected_doc_types": ["dietary_guideline", "exercise"]
+  }
+]

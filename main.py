@@ -13,7 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description="个人健康管理助手")
     parser.add_argument(
         "command",
-        choices=["streamlit", "cli", "ingest", "eval"],
+        choices=["streamlit", "cli", "ingest", "eval", "benchmark"],
         help="要执行的命令",
     )
     parser.add_argument("query", nargs="*", help="CLI 模式下的查询内容")
@@ -29,6 +29,11 @@ def main():
         subprocess.run([sys.executable, str(ROOT / "scripts" / "ingest_kb.py")], check=False)
     elif args.command == "eval":
         subprocess.run([sys.executable, str(ROOT / "scripts" / "evaluate_rag.py")], check=False)
+    elif args.command == "benchmark":
+        subprocess.run(
+            [sys.executable, str(ROOT / "scripts" / "run_benchmark.py"), "--version", "optimized_v1"],
+            check=False,
+        )
 
 
 if __name__ == "__main__":

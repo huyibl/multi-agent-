@@ -27,6 +27,7 @@ class RetrieverAgent(BaseAgent):
         mapping = {
             "muscle_gain_nutrition": ["dietary_guideline", "exercise", "nutrition_table"],
             "weight_loss": ["dietary_guideline", "nutrition_table"],
+            "calorie_nutrition": ["dietary_guideline", "nutrition_table"],
             "general_health": None,
         }
         return mapping.get(intent)

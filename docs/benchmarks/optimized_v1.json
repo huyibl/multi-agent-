@@ -1,0 +1,508 @@
+{
+  "generated_at": "2026-08-05T08:53:07.498340+00:00",
+  "version": "optimized_v1",
+  "kb_file_count": 14,
+  "environment": {
+    "embedding_provider": "dashscope",
+    "embedding_model": "text-embedding-v4",
+    "deepseek_model": "deepseek-v4-flash",
+    "llm_configured": true,
+    "planner_use_llm": "auto",
+    "reviewer_use_llm": "auto",
+    "retrieval_merge_queries": true,
+    "chunk_size": 512,
+    "chunk_overlap": 64,
+    "retrieval_top_k": 5
+  },
+  "rag": {
+    "summary": {
+      "total_queries": 15,
+      "k_values": [
+        1,
+        3,
+        5
+      ],
+      "recall_at_k": {
+        "recall@1": 1.0,
+        "recall@3": 1.0,
+        "recall@5": 1.0
+      },
+      "mrr": 1.0,
+      "avg_latency_ms": 1045.03,
+      "hit_rate_any": 1.0
+    },
+    "details": [
+      {
+        "query_id": "q01",
+        "query": "增肌 蛋白质 摄入量 推荐",
+        "expected_sources": [
+          "protein_guidelines.md",
+          "muscle_gain_protein.md",
+          "issn_protein_position.md"
+        ],
+        "expected_doc_types": [
+          "dietary_guideline",
+          "exercise"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\protein_guidelines.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\issn_protein_position.md"
+        ],
+        "retrieved_doc_types": [
+          "dietary_guideline",
+          "exercise"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 2066.57,
+        "matched": true
+      },
+      {
+        "query_id": "q02",
+        "query": "每日热量 推荐 成年人",
+        "expected_sources": [
+          "calorie_guidelines.md",
+          "daily_dri_reference.csv"
+        ],
+        "expected_doc_types": [
+          "dietary_guideline",
+          "nutrition_table"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\calorie_guidelines.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\nutrition_tables\\daily_dri_reference.csv",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\nutrition_tables\\daily_dri_reference.csv"
+        ],
+        "retrieved_doc_types": [
+          "dietary_guideline",
+          "nutrition_table",
+          "nutrition_table"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 1037.2,
+        "matched": true
+      },
+      {
+        "query_id": "q03",
+        "query": "抗阻力训练 营养 蛋白质",
+        "expected_sources": [
+          "muscle_gain_protein.md",
+          "issn_protein_position.md",
+          "pre_post_workout_nutrition.md"
+        ],
+        "expected_doc_types": [
+          "exercise"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\muscle_gain_protein.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\cardio_vs_strength.md"
+        ],
+        "retrieved_doc_types": [
+          "exercise",
+          "exercise"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 971.12,
+        "matched": true
+      },
+      {
+        "query_id": "q04",
+        "query": "鸡胸肉 蛋白质含量",
+        "expected_sources": [
+          "common_foods.csv",
+          "protein_foods_ranking.csv"
+        ],
+        "expected_doc_types": [
+          "nutrition_table"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\nutrition_tables\\common_foods.csv",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\nutrition_tables\\protein_foods_ranking.csv"
+        ],
+        "retrieved_doc_types": [
+          "nutrition_table",
+          "nutrition_table"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 992.03,
+        "matched": true
+      },
+      {
+        "query_id": "q05",
+        "query": "膳食指南 蛋白质 一般人群",
+        "expected_sources": [
+          "protein_guidelines.md",
+          "chinese_dietary_balance.md"
+        ],
+        "expected_doc_types": [
+          "dietary_guideline"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\protein_guidelines.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\chinese_dietary_balance.md"
+        ],
+        "retrieved_doc_types": [
+          "dietary_guideline",
+          "dietary_guideline"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 971.37,
+        "matched": true
+      },
+      {
+        "query_id": "q06",
+        "query": "减脂 蛋白质 保护肌肉",
+        "expected_sources": [
+          "fat_loss_nutrition.md",
+          "calorie_guidelines.md"
+        ],
+        "expected_doc_types": [
+          "exercise",
+          "dietary_guideline"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\fat_loss_nutrition.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\cardio_vs_strength.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\issn_protein_position.md"
+        ],
+        "retrieved_doc_types": [
+          "exercise",
+          "exercise",
+          "exercise"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 947.72,
+        "matched": true
+      },
+      {
+        "query_id": "q07",
+        "query": "训练前 训练后 吃什么",
+        "expected_sources": [
+          "pre_post_workout_nutrition.md"
+        ],
+        "expected_doc_types": [
+          "exercise"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\pre_post_workout_nutrition.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\cardio_vs_strength.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\hydration_guidelines.md"
+        ],
+        "retrieved_doc_types": [
+          "exercise",
+          "exercise",
+          "dietary_guideline"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 996.45,
+        "matched": true
+      },
+      {
+        "query_id": "q08",
+        "query": "脂肪 碳水化合物 比例 增肌",
+        "expected_sources": [
+          "fat_carb_guidelines.md"
+        ],
+        "expected_doc_types": [
+          "dietary_guideline"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\fat_carb_guidelines.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\cardio_vs_strength.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\pre_post_workout_nutrition.md"
+        ],
+        "retrieved_doc_types": [
+          "dietary_guideline",
+          "exercise",
+          "exercise"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 950.42,
+        "matched": true
+      },
+      {
+        "query_id": "q09",
+        "query": "运动 补水 饮水量",
+        "expected_sources": [
+          "hydration_guidelines.md"
+        ],
+        "expected_doc_types": [
+          "dietary_guideline"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\hydration_guidelines.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\nutrition_tables\\daily_dri_reference.csv",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\pre_post_workout_nutrition.md"
+        ],
+        "retrieved_doc_types": [
+          "dietary_guideline",
+          "nutrition_table",
+          "exercise"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 994.32,
+        "matched": true
+      },
+      {
+        "query_id": "q10",
+        "query": "有氧 抗阻 蛋白质 需求 差异",
+        "expected_sources": [
+          "cardio_vs_strength.md"
+        ],
+        "expected_doc_types": [
+          "exercise"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\cardio_vs_strength.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\muscle_gain_protein.md"
+        ],
+        "retrieved_doc_types": [
+          "exercise",
+          "exercise"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 915.81,
+        "matched": true
+      },
+      {
+        "query_id": "q11",
+        "query": "每日推荐摄入量 能量 蛋白质",
+        "expected_sources": [
+          "daily_dri_reference.csv"
+        ],
+        "expected_doc_types": [
+          "nutrition_table"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\nutrition_tables\\daily_dri_reference.csv",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\protein_guidelines.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\nutrition_tables\\daily_dri_reference.csv"
+        ],
+        "retrieved_doc_types": [
+          "nutrition_table",
+          "dietary_guideline",
+          "nutrition_table"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 973.24,
+        "matched": true
+      },
+      {
+        "query_id": "q12",
+        "query": "ISSN 蛋白质 g/kg 立场",
+        "expected_sources": [
+          "issn_protein_position.md",
+          "muscle_gain_protein.md"
+        ],
+        "expected_doc_types": [
+          "exercise"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\issn_protein_position.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\protein_guidelines.md"
+        ],
+        "retrieved_doc_types": [
+          "exercise",
+          "dietary_guideline"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 980.36,
+        "matched": true
+      },
+      {
+        "query_id": "q13",
+        "query": "平衡膳食 食物多样",
+        "expected_sources": [
+          "chinese_dietary_balance.md"
+        ],
+        "expected_doc_types": [
+          "dietary_guideline"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\chinese_dietary_balance.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\calorie_guidelines.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\fat_carb_guidelines.md"
+        ],
+        "retrieved_doc_types": [
+          "dietary_guideline",
+          "dietary_guideline",
+          "dietary_guideline"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 914.26,
+        "matched": true
+      },
+      {
+        "query_id": "q14",
+        "query": "希腊酸奶 蛋白 含量",
+        "expected_sources": [
+          "protein_foods_ranking.csv",
+          "common_foods.csv"
+        ],
+        "expected_doc_types": [
+          "nutrition_table"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\nutrition_tables\\common_foods.csv",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\nutrition_tables\\protein_foods_ranking.csv"
+        ],
+        "retrieved_doc_types": [
+          "nutrition_table",
+          "nutrition_table"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 957.0,
+        "matched": true
+      },
+      {
+        "query_id": "q15",
+        "query": "我身高172体重70增肌每天多少蛋白质",
+        "expected_sources": [
+          "protein_guidelines.md",
+          "muscle_gain_protein.md",
+          "issn_protein_position.md"
+        ],
+        "expected_doc_types": [
+          "dietary_guideline",
+          "exercise"
+        ],
+        "retrieved_sources": [
+          "D:\\cursor_project\\health-assistant\\data\\raw\\dietary_guidelines\\protein_guidelines.md",
+          "D:\\cursor_project\\health-assistant\\data\\raw\\exercise_literature\\issn_protein_position.md"
+        ],
+        "retrieved_doc_types": [
+          "dietary_guideline",
+          "exercise"
+        ],
+        "hit_at_k": {
+          "1": true,
+          "3": true,
+          "5": true
+        },
+        "reciprocal_rank": 1.0,
+        "latency_ms": 1007.65,
+        "matched": true
+      }
+    ]
+  },
+  "e2e": [
+    {
+      "query": "我身高172，体重70，想增肌，每天吃多少蛋白质？",
+      "latency_ms": 8077.79,
+      "review_status": "pass",
+      "retrieved_chunks": 2,
+      "protein_range_g": [
+        112,
+        154
+      ],
+      "has_citations": true,
+      "llm_calls": 1
+    },
+    {
+      "query": "减脂期间蛋白质应该怎么吃？",
+      "latency_ms": 7558.62,
+      "review_status": "pass",
+      "retrieved_chunks": 2,
+      "protein_range_g": [
+        112,
+        154
+      ],
+      "has_citations": true,
+      "llm_calls": 1
+    },
+    {
+      "query": "每日热量大概需要多少？",
+      "latency_ms": 10980.69,
+      "review_status": "pass",
+      "retrieved_chunks": 3,
+      "protein_range_g": [
+        56,
+        84
+      ],
+      "has_citations": true,
+      "llm_calls": 1
+    }
+  ],
+  "e2e_summary": {
+    "avg_latency_ms": 8872.37,
+    "max_latency_ms": 10980.69,
+    "avg_llm_calls": 1.0,
+    "review_pass_rate": 1.0
+  },
+  "pytest": {
+    "exit_code": 0,
+    "passed": 12,
+    "failed": 0,
+    "duration_sec": 39.84,
+    "success": true
+  }
+}

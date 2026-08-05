@@ -19,31 +19,36 @@ class HealthRetriever:
         doc_types: list[str] | None = None,
         top_k: int | None = None,
     ) -> list[RetrievedChunk]:
-        """对多个查询检索并去重。"""
+        """对查询检索并去重；默认合并为单次 embedding 调用。"""
         top_k = top_k or self.settings.retrieval_top_k
-        seen: set[str] = set()
-        chunks: list[RetrievedChunk] = []
 
-        for query in queries:
-            docs = similarity_search(
-                query=query,
-                k=top_k,
-                doc_types=doc_types,
-                settings=self.settings,
-            )
-            for doc in docs:
-                key = doc.page_content[:100]
-                if key in seen:
-                    continue
-                seen.add(key)
-                meta = doc.metadata or {}
-                chunks.append(
-                    RetrievedChunk(
-                        content=doc.page_content,
-                        source=meta.get("source", meta.get("file_path", "unknown")),
-                        page=meta.get("page"),
-                        doc_type=meta.get("doc_type", ""),
-                        score=meta.get("score", 0.0),
-                    )
+        if self.settings.retrieval_merge_queries and queries:
+            search_query = queries[0]
+        else:
+            search_query = queries[0] if len(queries) == 1 else " ".join(queries[:3])
+
+        docs = similarity_search(
+            query=search_query,
+            k=top_k,
+            doc_types=doc_types,
+            settings=self.settings,
+        )
+
+        chunks: list[RetrievedChunk] = []
+        seen: set[str] = set()
+        for doc in docs:
+            key = doc.page_content[:100]
+            if key in seen:
+                continue
+            seen.add(key)
+            meta = doc.metadata or {}
+            chunks.append(
+                RetrievedChunk(
+                    content=doc.page_content,
+                    source=meta.get("source", meta.get("file_path", "unknown")),
+                    page=meta.get("page"),
+                    doc_type=meta.get("doc_type", ""),
+                    score=meta.get("score", 0.0),
                 )
-        return chunks[: top_k * 2]
+            )
+        return chunks[:top_k]
