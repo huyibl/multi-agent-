@@ -110,7 +110,6 @@ health-assistant/
 - [架构说明](docs/architecture.md)
 - [Agent 设计](docs/agent_design.md)
 - [部署指南](docs/deployment.md)
-- [面试答辩指南](docs/interview_guide.md)
 - [MVP 基线性能报告](docs/benchmarks/mvp_baseline_report.md)
 - [optimized_v1 报告](docs/benchmarks/optimized_v1_report.md)
 - [MVP vs optimized_v1 对比](docs/benchmarks/mvp_vs_optimized_v1_report.md)
