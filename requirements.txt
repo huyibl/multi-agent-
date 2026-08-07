@@ -7,8 +7,9 @@ langgraph-checkpoint-sqlite>=3.0.0
 openai>=1.66.0
 langchain-openai>=0.3.0
 
-chromadb==1.0.12
-langchain-chroma>=0.2.4
+# 1.x 在 Streamlit Cloud 上 PersistentClient 易报 default_tenant；钉 0.5.x
+chromadb==0.5.23
+langchain-chroma==0.2.2
 pysqlite3-binary>=0.5.0
 dashscope>=1.22.1
 

@@ -97,10 +97,13 @@ if admin_mode:
     with tab_kb:
         st.subheader("私人知识库入库")
         st.write(
-            "Cloud 首次部署后请点下方按钮重建（写入 `/tmp`）。"
-            " 成功或失败都会在按钮下方显示结果。"
+            "Cloud 使用内存向量库：每次 **Reboot 后需重新点重建**；"
+            "成功或失败都会显示在按钮下方。"
         )
-        st.caption(f"Chroma 目录: `{settings.chroma_persist_dir}`")
+        st.caption(
+            f"模式: `{'Ephemeral(Cloud)' if is_streamlit_cloud() else 'Persistent'}` | "
+            f"目录: `{settings.chroma_persist_dir}`"
+        )
         info = sqlite_info()
         st.caption(
             f"SQLite: {info.get('sqlite_version')} | pysqlite3 补丁: "

@@ -32,7 +32,7 @@ ANONYMIZED_TELEMETRY = "False"
 
 **不要**在 Cloud 使用 `EMBEDDING_PROVIDER=local`（需下载 bge-m3）。
 
-Cloud 会将向量库落到 `/tmp/chroma_health`（可写）；首次自动从 `data/chroma/` seed。若仍报 `default_tenant`，用 `?admin=1` 重建向量库。
+Cloud 使用 **Chroma Ephemeral（内存）**：打开 `?admin=1` 点「重建向量库」。Reboot 后需再重建一次。本地仍用 Persistent + `data/chroma/`。
 
 本地无 `secrets.toml` 时，`config/bootstrap.py` 会跳过 Secrets，继续读 `.env`。
 
