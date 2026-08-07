@@ -101,7 +101,7 @@ def is_streamlit_cloud() -> bool:
 
 
 def configure_cloud_chroma():
-    """Cloud 上将向量库落到可写的 ``/tmp``，并尝试从仓库预构建库 seed。
+    """Cloud 上将向量库落到可写的 ``/tmp``（不拷贝本地预构建库，避免跨平台损坏）。
 
     Returns:
         生效的 Chroma 目录；非 Cloud 返回 ``None``。
@@ -118,15 +118,6 @@ def configure_cloud_chroma():
 
     dest = CLOUD_CHROMA_DIR
     dest.mkdir(parents=True, exist_ok=True)
-    src = PROJECT_ROOT / "data" / "chroma"
-    marker = dest / "chroma.sqlite3"
-    # 首次启动：把仓库里的预构建库拷到 /tmp（源码挂载可能不适合写）
-    if not marker.exists() and (src / "chroma.sqlite3").exists():
-        try:
-            shutil.copytree(src, dest, dirs_exist_ok=True)
-        except Exception:
-            pass
-
     os.environ["CHROMA_PERSIST_DIR"] = str(dest)
     return dest
 

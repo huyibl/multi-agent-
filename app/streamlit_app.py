@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
 # Chroma 依赖较新 SQLite：必须在 import chromadb 之前打补丁
-from config.sqlite_patch import apply_sqlite_patch
+from config.sqlite_patch import apply_sqlite_patch, sqlite_info
 
 apply_sqlite_patch()
 
@@ -92,14 +92,51 @@ if admin_mode:
         render_chat_history()
     with tab_kb:
         st.subheader("私人知识库入库")
-        st.write("将 PDF/Markdown/CSV 放入 `data/raw/` 后重建向量库。普通用户无需此入口。")
+        st.write(
+            "Cloud 首次部署后请点下方按钮重建（写入 `/tmp`）。"
+            " 成功或失败都会在按钮下方显示结果。"
+        )
+        st.caption(f"Chroma 目录: `{settings.chroma_persist_dir}`")
+        info = sqlite_info()
+        st.caption(
+            f"SQLite: {info.get('sqlite_version')} | pysqlite3 补丁: "
+            f"{'已启用' if info.get('patched') else '未启用'}"
+        )
+
         if st.button("重建向量库", type="primary"):
             with st.spinner("正在入库..."):
-                result = IngestService().run()
-            st.success(
-                f"完成：加载 {result['loaded']} 页，生成 {result['chunks']} 块，"
-                f"存储 {result['stored']} 条"
-            )
+                try:
+                    result = IngestService().run()
+                    if result.get("stored", 0) <= 0:
+                        st.session_state["ingest_feedback"] = {
+                            "ok": False,
+                            "text": (
+                                f"入库未写入数据：加载 {result.get('loaded', 0)} 页，"
+                                f"切块 {result.get('chunks', 0)}。"
+                                " 请确认仓库中存在 `data/raw/` 文档。"
+                            ),
+                        }
+                    else:
+                        st.session_state["ingest_feedback"] = {
+                            "ok": True,
+                            "text": (
+                                f"重建成功：加载 {result['loaded']} 页，"
+                                f"生成 {result['chunks']} 块，存储 {result['stored']} 条。"
+                                f" 路径: {settings.chroma_persist_dir}"
+                            ),
+                        }
+                except Exception as exc:
+                    st.session_state["ingest_feedback"] = {
+                        "ok": False,
+                        "text": f"重建失败：{exc}",
+                    }
+
+        feedback = st.session_state.get("ingest_feedback")
+        if feedback:
+            if feedback.get("ok"):
+                st.success(feedback["text"])
+            else:
+                st.error(feedback["text"])
 else:
     render_chat_history()
 
