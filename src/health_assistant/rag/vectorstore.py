@@ -6,7 +6,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional
 
 import chromadb
 from langchain_chroma import Chroma
