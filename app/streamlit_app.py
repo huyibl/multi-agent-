@@ -8,13 +8,20 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
+import streamlit as st
+
+# 必须是第一个 Streamlit 命令，否则会触发 SessionInfo 未初始化
+st.set_page_config(
+    page_title="AI 健身教练",
+    page_icon="💪",
+    layout="wide",
+)
+
 from config.bootstrap import apply_streamlit_secrets, is_streamlit_cloud
 
 apply_streamlit_secrets()
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
 os.environ.setdefault("EMBEDDING_PROVIDER", "dashscope")
-
-import streamlit as st
 
 from app.components.chat_panel import handle_user_prompt, render_chat_history
 from app.components.source_viewer import render_source_viewer
@@ -28,12 +35,6 @@ try:
     admin_mode = st.query_params.get("admin") == "1"
 except Exception:
     admin_mode = False
-
-st.set_page_config(
-    page_title="AI 健身教练",
-    page_icon="💪",
-    layout="wide",
-)
 
 # ---------- 侧边栏：档案 + 思考过程 ----------
 with st.sidebar:
