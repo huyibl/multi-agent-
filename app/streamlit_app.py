@@ -95,6 +95,17 @@ with st.sidebar:
         st.caption(f"知识库: 已就绪（{kb_info.get('stored', 0)} 条）")
     else:
         st.caption(f"知识库: 未就绪 — {kb_info.get('error') or '请检查 Embedding Key'}")
+
+    from app.rate_limit import check_rate_limit, format_quota_caption, load_config
+
+    _rl_cfg = load_config("health_assistant")
+    _rl = check_rate_limit(
+        app_name="health_assistant", session_state=st.session_state, config=_rl_cfg
+    )
+    st.caption(format_quota_caption(_rl, enabled=_rl_cfg.enabled))
+    if _rl_cfg.enabled and not _rl.allowed:
+        st.warning(_rl.reason)
+
     st.caption("免责声明：仅供健身营养参考，不构成医疗建议。")
 
 # ---------- 主区：标题 + 消息列表 ----------
@@ -161,9 +172,19 @@ else:
     render_chat_history()
 
 # ---------- 输入框必须在页面根级，才会固定在视口底部 ----------
+from app.rate_limit import check_rate_limit, load_config as _load_rl
+
+_prompt_cfg = _load_rl("health_assistant")
+_prompt_quota = check_rate_limit(
+    app_name="health_assistant", session_state=st.session_state, config=_prompt_cfg
+)
+_chat_disabled = _prompt_cfg.enabled and not _prompt_quota.allowed
+
 prompt = st.session_state.pop("_pending_prompt", None)
-if prompt is None:
+if prompt is None and not _chat_disabled:
     prompt = st.chat_input("例如：我身高172体重70想增肌，蛋白质吃多少？")
+elif _chat_disabled:
+    st.chat_input("演示额度已用完，请稍后再试", disabled=True)
 
 if prompt:
     handle_user_prompt(prompt)

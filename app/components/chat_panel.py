@@ -61,7 +61,27 @@ def render_chat_history() -> None:
 
 def handle_user_prompt(prompt: str) -> None:
     """处理一轮用户输入（在 chat_input 吸底后由主页面调用）。"""
+    from app.rate_limit import consume_rate_limit, load_config
+
     init_chat_state()
+
+    cfg = load_config("health_assistant")
+    quota = consume_rate_limit(
+        app_name="health_assistant", session_state=st.session_state, config=cfg
+    )
+    if not quota.allowed:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        deny = (
+            f"{quota.reason}\n\n"
+            "> 公开 Demo 有用量限制，防止 API 被刷。本地开发可设 `DEMO_RATE_LIMIT=0`。"
+        )
+        st.session_state.messages.append({"role": "assistant", "content": deny})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        with st.chat_message("assistant"):
+            st.warning(deny)
+        return
+
     history_before = list(st.session_state.messages)
     st.session_state.messages.append({"role": "user", "content": prompt})
 

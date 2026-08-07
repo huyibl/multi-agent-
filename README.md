@@ -69,6 +69,16 @@ python main.py streamlit                         # http://localhost:8501
 
 Streamlit Cloud：Main file=`app/streamlit_app.py`，Secrets 见 `.streamlit/secrets.toml.example`。首次访问自动建库，详见 [部署指南](docs/deployment.md)。
 
+### Demo 防刷限额（Cloud 默认开启）
+
+| 项 | 默认 |
+|----|------|
+| 每会话 | 10 次对话 |
+| 全站每日 | 100 次 |
+| 冷却 | 15 秒 |
+
+Secrets：`DEMO_SESSION_LIMIT` / `DEMO_DAILY_LIMIT` / `DEMO_COOLDOWN_SEC`；本地 `DEMO_RATE_LIMIT=0` 可关闭。
+
 ## 性能指标（实测）
 
 | 指标 | MVP | optimized_v1 / 最新 |
