@@ -6,9 +6,24 @@ import os
 import shutil
 from pathlib import Path
 
-from config.sqlite_patch import apply_sqlite_patch
-
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _apply_sqlite_patch() -> bool:
+    """延迟导入，避免 ``config`` 包名冲突时启动失败。"""
+    try:
+        from health_assistant.utils.sqlite_patch import apply_sqlite_patch
+
+        return apply_sqlite_patch()
+    except Exception:
+        try:
+            import pysqlite3  # type: ignore
+            import sys
+
+            sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+            return True
+        except Exception:
+            return False
 CLOUD_CHROMA_DIR = Path("/tmp/chroma_health")
 
 SECRET_ENV_KEYS = (
@@ -106,7 +121,7 @@ def configure_cloud_chroma():
     Returns:
         生效的 Chroma 目录；非 Cloud 返回 ``None``。
     """
-    apply_sqlite_patch()
+    _apply_sqlite_patch()
     if not is_streamlit_cloud():
         return None
 
@@ -124,5 +139,5 @@ def configure_cloud_chroma():
 
 def prepare_runtime() -> None:
     """应用启动时调用：SQLite 补丁 + Cloud Chroma 路径。"""
-    apply_sqlite_patch()
+    _apply_sqlite_patch()
     configure_cloud_chroma()

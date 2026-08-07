@@ -84,9 +84,13 @@ def get_settings() -> Settings:
     """返回缓存的配置实例。"""
     try:
         from config.bootstrap import apply_streamlit_secrets, prepare_runtime
-        from config.sqlite_patch import apply_sqlite_patch
 
-        apply_sqlite_patch()
+        try:
+            from health_assistant.utils.sqlite_patch import apply_sqlite_patch
+
+            apply_sqlite_patch()
+        except Exception:
+            pass
         apply_streamlit_secrets()
         prepare_runtime()
     except Exception:

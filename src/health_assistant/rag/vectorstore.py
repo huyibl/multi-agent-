@@ -13,8 +13,8 @@ from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
 
 from config.settings import Settings, get_settings
-from config.sqlite_patch import apply_sqlite_patch
 from health_assistant.rag.embedder import create_embedder
+from health_assistant.utils.sqlite_patch import apply_sqlite_patch
 
 logger = logging.getLogger(__name__)
 

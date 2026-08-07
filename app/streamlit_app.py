@@ -8,10 +8,13 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
-# Chroma 依赖较新 SQLite：必须在 import chromadb 之前打补丁
-from config.sqlite_patch import apply_sqlite_patch, sqlite_info
+# 内联补丁：不依赖 config.*（Cloud 上 config 包名易冲突导致 ImportError）
+try:
+    import pysqlite3  # type: ignore
 
-apply_sqlite_patch()
+    sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+except ImportError:
+    pass
 
 import streamlit as st
 
@@ -37,6 +40,7 @@ from app.components.chat_panel import handle_user_prompt, render_chat_history
 from app.components.source_viewer import render_source_viewer
 from config.settings import clear_settings_cache, get_settings
 from health_assistant.services.ingest_service import IngestService
+from health_assistant.utils.sqlite_patch import sqlite_info
 
 clear_settings_cache()
 settings = get_settings()
