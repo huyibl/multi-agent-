@@ -81,16 +81,16 @@ class Settings(BaseSettings):
 
 @lru_cache
 def get_settings() -> Settings:
-    """返回缓存的配置实例。"""
+    """返回缓存的配置实例。
+
+    Secrets 仅在主线程 ScriptRunContext 可用时注入；工作线程只读已有环境变量。
+    """
     try:
         from config.bootstrap import apply_streamlit_secrets, prepare_runtime
+        from health_assistant.utils.sqlite_patch import apply_sqlite_patch
 
-        try:
-            from health_assistant.utils.sqlite_patch import apply_sqlite_patch
-
-            apply_sqlite_patch()
-        except Exception:
-            pass
+        apply_sqlite_patch()
+        # 无 ctx 时 apply_streamlit_secrets 会安全跳过，不会触发 SessionInfo 报错
         apply_streamlit_secrets()
         prepare_runtime()
     except Exception:

@@ -6,23 +6,6 @@ import os
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
-
-def _apply_sqlite_patch() -> bool:
-    """延迟导入，避免 ``config`` 包名冲突时启动失败。"""
-    try:
-        from health_assistant.utils.sqlite_patch import apply_sqlite_patch
-
-        return apply_sqlite_patch()
-    except Exception:
-        try:
-            import pysqlite3  # type: ignore
-            import sys
-
-            sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
-            return True
-        except Exception:
-            return False
 CLOUD_CHROMA_DIR = Path("/tmp/chroma_health")
 
 SECRET_ENV_KEYS = (
@@ -45,6 +28,35 @@ SECRET_ENV_KEYS = (
     "ANONYMIZED_TELEMETRY",
 )
 
+_SECRETS_APPLIED = False
+
+
+def _apply_sqlite_patch() -> bool:
+    """延迟导入，避免 ``config`` 包名冲突时启动失败。"""
+    try:
+        from health_assistant.utils.sqlite_patch import apply_sqlite_patch
+
+        return apply_sqlite_patch()
+    except Exception:
+        try:
+            import pysqlite3  # type: ignore
+            import sys
+
+            sys.modules["sqlite3"] = sys.modules.pop("pysqlite3")
+            return True
+        except Exception:
+            return False
+
+
+def _has_script_run_ctx() -> bool:
+    """仅在主脚本线程且 Session 已初始化时才允许访问 ``st.secrets``。"""
+    try:
+        from streamlit.runtime.scriptrunner import get_script_run_ctx
+
+        return get_script_run_ctx() is not None
+    except Exception:
+        return False
+
 
 def _secrets_file_exists() -> bool:
     """本地是否存在 secrets.toml（避免无文件时触发 Streamlit 异常）。"""
@@ -58,19 +70,27 @@ def _secrets_file_exists() -> bool:
 
 
 def apply_streamlit_secrets() -> bool:
-    """若运行在 Streamlit 且存在 secrets，写入 os.environ（不覆盖已有环境变量）。"""
-    try:
-        import streamlit as st
-    except ImportError:
-        return False
+    """若运行在 Streamlit 且存在 secrets，写入 os.environ（不覆盖已有环境变量）。
 
-    # 本地无 secrets.toml 且非 Cloud 时直接跳过，避免 StreamlitSecretNotFoundError
+    无 ScriptRunContext（例如 ThreadPool 工作线程）时直接跳过，
+    避免 ``Tried to use SessionInfo before it was initialized``。
+    """
+    global _SECRETS_APPLIED
+    if _SECRETS_APPLIED:
+        return True
+
+    # 本地无 secrets.toml 且非 Cloud 时直接跳过
     if not is_streamlit_cloud() and not _secrets_file_exists():
         return False
 
+    # 后台线程 / 导入阶段：禁止碰 st.secrets
+    if not _has_script_run_ctx():
+        return False
+
     try:
+        import streamlit as st
+
         secrets = st.secrets
-        # 触发解析；无文件时会抛 StreamlitSecretNotFoundError
         _ = list(secrets.keys()) if hasattr(secrets, "keys") else len(secrets)
     except Exception:
         return False
@@ -89,12 +109,15 @@ def apply_streamlit_secrets() -> bool:
         applied = True
 
     os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
+    _SECRETS_APPLIED = True
     return applied
 
 
 def has_streamlit_secrets() -> bool:
     """安全检测是否存在可用的 Streamlit secrets。"""
     if not is_streamlit_cloud() and not _secrets_file_exists():
+        return False
+    if not _has_script_run_ctx():
         return False
     try:
         import streamlit as st
@@ -115,16 +138,11 @@ def is_streamlit_cloud() -> bool:
 
 
 def configure_cloud_chroma():
-    """Cloud 上将向量库落到可写的 ``/tmp``（不拷贝本地预构建库，避免跨平台损坏）。
-
-    Returns:
-        生效的 Chroma 目录；非 Cloud 返回 ``None``。
-    """
+    """Cloud 上将向量库落到可写的 ``/tmp``。"""
     _apply_sqlite_patch()
     if not is_streamlit_cloud():
         return None
 
-    # 允许 Secrets / 环境变量覆盖
     if os.environ.get("CHROMA_PERSIST_DIR"):
         path = Path(os.environ["CHROMA_PERSIST_DIR"])
         path.mkdir(parents=True, exist_ok=True)
