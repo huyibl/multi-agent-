@@ -21,6 +21,7 @@ class DashScopeEmbeddings(Embeddings):
         self.dimension = dimension
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """批量嵌入文档文本（每批最多 10 条）。"""
         import dashscope
         from dashscope import TextEmbedding
 
@@ -42,6 +43,7 @@ class DashScopeEmbeddings(Embeddings):
         return embeddings
 
     def embed_query(self, text: str) -> list[float]:
+        """嵌入单条检索 Query。"""
         import dashscope
         from dashscope import TextEmbedding
 
@@ -66,9 +68,11 @@ class LocalEmbeddings(Embeddings):
         self.model = SentenceTransformer(model_name)
 
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        """批量嵌入文档文本（本地模型，L2 归一化）。"""
         return self.model.encode(texts, normalize_embeddings=True).tolist()
 
     def embed_query(self, text: str) -> list[float]:
+        """嵌入单条检索 Query（本地模型）。"""
         return self.model.encode(text, normalize_embeddings=True).tolist()
 
 

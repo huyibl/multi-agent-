@@ -1,0 +1,2 @@
+# 与 requirements.txt 相同；保留此文件便于文档引用
+-r requirements.txt

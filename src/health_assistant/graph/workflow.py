@@ -13,7 +13,11 @@ from health_assistant.graph.state import HealthState
 
 
 def build_workflow(checkpointer=None):
-    """构建多 Agent 健康管理图工作流（含并行检索/计算）。"""
+    """构建并编译多 Agent 健身教练图（含并行检索/计算）。
+
+    Args:
+        checkpointer: 可选 LangGraph checkpointer，用于会话持久化。
+    """
     graph = StateGraph(HealthState)
 
     graph.add_node("planner", planner_node)

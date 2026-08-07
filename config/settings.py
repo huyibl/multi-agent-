@@ -1,4 +1,4 @@
-"""从环境变量加载的应用配置。"""
+"""AI 健身教练应用配置：从环境变量 / ``.env`` / Streamlit Secrets 加载。"""
 
 from functools import lru_cache
 from pathlib import Path
@@ -11,7 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    """健康管理助手的中央配置。"""
+    """AI 健身教练的中央配置。"""
 
     model_config = SettingsConfigDict(
         env_file=str(PROJECT_ROOT / ".env"),
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     dashscope_api_key: str = Field(default="", alias="DASHSCOPE_API_KEY")
     embedding_model: str = Field(default="text-embedding-v4", alias="EMBEDDING_MODEL")
     embedding_provider: Literal["dashscope", "local"] = Field(
-        default="local", alias="EMBEDDING_PROVIDER"
+        default="dashscope", alias="EMBEDDING_PROVIDER"
     )
     embedding_dimension: int = Field(default=1024, alias="EMBEDDING_DIMENSION")
     local_embedding_model: str = Field(default="BAAI/bge-m3", alias="LOCAL_EMBEDDING_MODEL")
@@ -82,4 +82,15 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """返回缓存的配置实例。"""
+    try:
+        from config.bootstrap import apply_streamlit_secrets
+
+        apply_streamlit_secrets()
+    except Exception:
+        pass
     return Settings()
+
+
+def clear_settings_cache() -> None:
+    """测试或 Secrets 变更后清除缓存。"""
+    get_settings.cache_clear()

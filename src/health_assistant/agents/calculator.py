@@ -10,6 +10,8 @@ from health_assistant.tools import bmi_category, calculate_bmi, calculate_macros
 
 
 class CalculatorAgent(BaseAgent):
+    """计算 Agent：调用确定性工具计算 BMI / TDEE / 宏量营养素。"""
+
     prompt_name = "calculator"
 
     def run(
@@ -17,6 +19,15 @@ class CalculatorAgent(BaseAgent):
         profile: UserProfile,
         plan: PlannerOutput,
     ) -> CalculationResults:
+        """合并实体后按可用字段计算营养指标。
+
+        Args:
+            profile: 当前会话用户档案。
+            plan: 规划结果（含实体与意图）。
+
+        Returns:
+            结构化计算结果；缺身高体重等字段时对应项为空。
+        """
         merged = profile.merge_from_entities(plan.entities)
         result = CalculationResults()
 

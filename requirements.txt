@@ -1,55 +1,28 @@
-# ========== 核心依赖 (Core) ==========
-# Agent 编排与 LLM 抽象
+# 默认依赖（兼容 Streamlit Cloud；本地完整环境见 requirements-local.txt）
 langgraph==1.2.10
 langchain-core>=1.4.7,<2.0.0
 langchain-community>=0.3.21
 langgraph-checkpoint-sqlite>=3.0.0
 
-# LLM API（OpenAI 兼容，对接 DeepSeek / 通义）
 openai>=1.66.0
 langchain-openai>=0.3.0
 
-# RAG 向量存储与嵌入
 chromadb==1.0.12
 langchain-chroma>=0.2.4
 dashscope>=1.22.1
 
-# 配置与数据模型
 pydantic>=2.7.4,<3.0.0
 pydantic-settings>=2.8.1
 
-# 前端
-streamlit>=1.44.0
+streamlit>=1.44.0,<1.45.0
+starlette>=0.40.0,<0.46.0
+fastapi==0.115.9
 
-# ========== 辅助依赖 (Auxiliary) ==========
-# 文档处理
 pypdf>=5.4.0
-python-docx>=1.1.2
-beautifulsoup4>=4.13.3
-lxml>=5.3.1
 pyyaml>=6.0.2
-
-# 本地 Embedding 兜底（可注释掉若纯 API）
-sentence-transformers>=3.4.1
-
-# 文本处理
 tiktoken>=0.9.0
 langchain-text-splitters>=0.3.6
-
-# 工具与运维
 python-dotenv>=1.0.1
 httpx>=0.28.1
 tenacity>=9.0.0
-rich>=13.9.4
-
-# 可观测性（可选，建议开启）
 langsmith>=0.3.18
-
-# 测试
-pytest>=8.3.5
-pytest-asyncio>=0.25.3
-pytest-mock>=3.14.0
-
-# 代码质量（可选）
-ruff>=0.9.10
-mypy>=1.15.0

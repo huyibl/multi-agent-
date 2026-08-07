@@ -28,9 +28,11 @@ class QueryEvalResult:
 
     @property
     def matched(self) -> bool:
+        """任一 K 值命中即为 True。"""
         return any(self.hit_at_k.values()) if self.hit_at_k else False
 
     def to_dict(self) -> dict[str, Any]:
+        """序列化为可写入 JSON 报告的字典。"""
         return {
             "query_id": self.query_id,
             "query": self.query,

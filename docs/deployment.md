@@ -1,75 +1,60 @@
 # 部署指南
 
-## 本地开发（Windows）
-
-### 前置条件
-
-- Python 3.10+
-- 8GB+ RAM（本地 Embedding 需要）
-
-### 步骤
+## 本地
 
 ```powershell
 cd health-assistant
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+pip install -r requirements-local.txt
 copy .env.example .env
-```
-
-编辑 `.env`：
-
-```env
-DEEPSEEK_API_KEY=sk-your-key
-DASHSCOPE_API_KEY=sk-your-key
-EMBEDDING_PROVIDER=local   # 或 dashscope
-```
-
-### 构建知识库
-
-```powershell
+# 填写 DEEPSEEK_API_KEY、DASHSCOPE_API_KEY；EMBEDDING_PROVIDER=dashscope
 python main.py ingest
-```
-
-### 启动 UI
-
-```powershell
 python main.py streamlit
 ```
 
-浏览器访问 `http://localhost:8501`
+访问 `http://localhost:8501`。管理员入库：`http://localhost:8501/?admin=1`。
 
-## 环境变量说明
+## Streamlit Cloud
 
-| 变量 | 必填 | 说明 |
-|------|------|------|
-| DEEPSEEK_API_KEY | 否 | LLM API，无则使用规则兜底 |
-| DASHSCOPE_API_KEY | 否 | Embedding API，无则使用 bge-m3 |
-| EMBEDDING_PROVIDER | 否 | `local` 或 `dashscope` |
-| CHROMA_PERSIST_DIR | 否 | 向量库路径，默认 `./data/chroma` |
+1. 提交预构建 `data/chroma/`（约 1–2MB）
+2. Main file：`app/streamlit_app.py`
+3. Secrets（参考 `.streamlit/secrets.toml.example`）：
 
-## LangSmith 追踪（可选）
-
-```env
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_API_KEY=ls-xxx
-LANGCHAIN_PROJECT=health-assistant
+```toml
+DEEPSEEK_API_KEY = "sk-xxx"
+DASHSCOPE_API_KEY = "sk-xxx"
+EMBEDDING_PROVIDER = "dashscope"
+PLANNER_USE_LLM = "auto"
+REVIEWER_USE_LLM = "auto"
+ANONYMIZED_TELEMETRY = "False"
 ```
 
-## Docker（可选扩展）
+**不要**在 Cloud 使用 `EMBEDDING_PROVIDER=local`（需下载 bge-m3）。
 
-当前 MVP 以本地 Streamlit 为主。生产部署可考虑：
+本地无 `secrets.toml` 时，`config/bootstrap.py` 会跳过 Secrets，继续读 `.env`。
 
-- FastAPI 包装 `ChatService`
-- Docker Compose：app + Chroma + PostgreSQL (PGVector)
+## 环境变量
+
+| 变量 | 说明 |
+|------|------|
+| `DEEPSEEK_API_KEY` | LLM；空则规则/模板兜底 |
+| `DASHSCOPE_API_KEY` | Embedding（Cloud 必填） |
+| `EMBEDDING_PROVIDER` | `dashscope` / `local` |
+| `PLANNER_USE_LLM` / `REVIEWER_USE_LLM` | `auto` \| `always` \| `never` |
+
+## 评测
+
+```bash
+python main.py eval-suite          # 50 检索 + 8 RAGAS-lite
+python scripts/run_eval_suite.py --skip-llm   # 仅检索
+python main.py benchmark           # E2E 对比
+```
 
 ## 常见问题
 
-**Q: 首次 ingest 很慢？**  
-A: 本地 bge-m3 首次需下载模型（约 2GB），可设 `EMBEDDING_PROVIDER=dashscope` 加速。
-
-**Q: Chroma 目录过大？**  
-A: `data/chroma/` 已在 `.gitignore`，可删除后重新 ingest。
-
-**Q: Windows 中文路径问题？**  
-A: 建议项目放在英文路径下，如 `D:\projects\health-assistant`。
+| 现象 | 处理 |
+|------|------|
+| SecretsNotFound 本地报错 | 已修复：无 toml 时跳过；请用最新 `bootstrap.py` |
+| Chroma panic | `python main.py ingest` 重建（或带 reset 脚本） |
+| streamlit/starlette 冲突 | 保持 `streamlit<1.45`、`fastapi==0.115.9` |

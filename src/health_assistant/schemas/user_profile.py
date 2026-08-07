@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 
 class ActivityLevel(str, Enum):
+    """日常活动水平（用于 TDEE 系数）。"""
+
     SEDENTARY = "sedentary"
     LIGHT = "light"
     MODERATE = "moderate"
@@ -15,6 +17,8 @@ class ActivityLevel(str, Enum):
 
 
 class HealthGoal(str, Enum):
+    """健身/营养目标（影响蛋白质与宏量配比）。"""
+
     LOSE_WEIGHT = "lose_weight"
     MAINTAIN = "maintain"
     BULK = "bulk"

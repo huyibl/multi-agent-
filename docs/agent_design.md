@@ -1,71 +1,54 @@
 # Agent 设计
 
-## Agent 职责一览
+## 职责一览
 
-| Agent | 职责 | 输入 | 输出 |
-|-------|------|------|------|
-| Planner | 意图识别、任务拆解 | query, profile | PlannerOutput |
-| Retriever | RAG 检索权威片段 | query, plan | list[RetrievedChunk] |
-| Calculator | 确定性营养计算 | profile, plan | CalculationResults |
-| Generator | 个性化建议生成 | plan, chunks, calculations | GeneratorOutput |
-| Reviewer | 一致性与免责声明核验 | answer, chunks, calculations | ReviewerOutput |
+| Agent | 职责 | 关键输入 | 输出 |
+|-------|------|----------|------|
+| Planner | 意图、实体、检索词；支持历史追问 | query, profile, history | `PlannerOutput` |
+| Retriever | Chroma 语义检索 + doc_type 过滤 | query, plan | `list[RetrievedChunk]` |
+| Calculator | BMI / 蛋白 / TDEE / 宏量（纯工具） | profile, plan | `CalculationResults` |
+| Generator | 健身建议 Markdown / JSON + 引用 | query, plan, chunks, calc, history | `GeneratorOutput` |
+| Reviewer | 免责声明与蛋白数值一致性 | answer, chunks, calc | `ReviewerOutput` |
 
-## Prompt 设计原则
+Prompt：`config/prompts/*.yaml`。在线流式使用 Generator 的 `stream_system`（直接 Markdown）。
 
-- Prompt 模板位于 `config/prompts/*.yaml`
-- 要求 LLM **输出 JSON**，便于解析与测试
-- Calculator **不依赖 LLM 算数**，仅使用 Python tools
+## Planner
 
-## Planner Agent
+- 规则抽取：身高/体重/年龄/性别/目标关键词。
+- `PLANNER_USE_LLM=auto`：意图明确走规则；短句追问走 LLM 消解指代。
+- 无历史实体时从近期用户消息回填。
 
-- 提取实体：身高、体重、目标（增肌/减重）
-- 生成 `retrieval_queries` 供 RAG 使用
-- **兜底**：正则提取 + 规则 intent（无 API Key 时可用）
+## Retriever
 
-## Retriever Agent
+- Intent → doc_type（膳食 / 运动 / 营养表）。
+- `RETRIEVAL_MERGE_QUERIES=true` 时合并为单次相似度检索。
 
-- 根据 intent 过滤 `doc_type`：dietary_guideline, exercise, nutrition_table
-- 多 query 检索并去重
+## Calculator
 
-## Calculator Agent
+- 不调用 LLM 做算术；增肌蛋白常用 1.6～2.2 g/kg。
+- 缺少身高体重时部分字段为空，由对话引导用户补充。
 
-- 调用 `tools/bmi.py`, `tools/tdee.py`, `tools/macros.py`
-- 增肌目标蛋白质：1.6～2.2 g/kg（ISSN 范围）
+## Generator
 
-## Generator Agent
+- 数值须与 `calculation_results` 一致；结尾强制免责声明。
+- 流式路径：`stream_tokens` → UI；非流式：`invoke_llm_json`。
+- 无 API Key：模板答案兜底。
 
-- 数值必须与 `calculation_results` 一致
-- 引用格式 `[1][2]`
-- 必须包含免责声明
-- **兜底**：模板化答案（无 API Key 时）
+## Reviewer
 
-## Reviewer Agent
+- `auto`：规则通过即 pass（免责声明；蛋白相关句中的建议克数范围）。
+- `always`：额外 LLM 深度评审。
+- `fail` 时带 feedback 打回 Generator，最多 `MAX_REVIEW_RETRIES`。
 
-- 规则检查：免责声明、蛋白质数值范围
-- LLM 检查：与检索来源矛盾（需 API Key）
-- `verdict=fail` 时触发 LangGraph 循环
+## 编排与状态
 
-## 状态管理
+在线：`ChatService.ask_events` 产出 `trace` / `token` / `profile` / `done`。  
+图定义：`graph/workflow.py` — analyzer 式并行在节点 `parallel_fetch`（retriever∥calculator）。
 
-```python
-class HealthState(TypedDict):
-    query: str
-    profile: UserProfile
-    plan: PlannerOutput
-    retrieved_chunks: list[RetrievedChunk]
-    calculation_results: CalculationResults
-    generator_output: GeneratorOutput
-    review_result: ReviewerOutput
-    review_retries: int
-```
+共享状态见 `graph/state.py` 的 `HealthState`（query、profile、plan、chunks、calculations、generator/reviewer 输出、retries）。
 
-## 面试常见问题
+## 面试要点
 
-**Q: 为什么 Calculator 不用 LLM？**  
-A: 营养数值需要可复现、可单测；LLM 可能算错，Reviewer 对照工具结果核验。
-
-**Q: 评审循环如何避免无限循环？**  
-A: `MAX_REVIEW_RETRIES=2`，超过则强制结束。
-
-**Q: 无 API Key 如何 Demo？**  
-A: Planner/Generator/Reviewer 均有 rule-based fallback；Embedding 默认 local bge-m3。
+**为何计算不用 LLM？** 可复现、可单测；Reviewer 对照工具输出。  
+**如何避免评审死循环？** `MAX_REVIEW_RETRIES`。  
+**无 Key 能否 Demo？** 规则/模板兜底；Embedding 可用 DashScope。

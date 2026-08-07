@@ -14,12 +14,14 @@ _agent_pool: dict = {}
 
 
 def _get_agent(name: str, cls):
+    """按名称复用 Agent 实例，避免每节点重复初始化。"""
     if name not in _agent_pool:
         _agent_pool[name] = cls()
     return _agent_pool[name]
 
 
 def planner_node(state: HealthState) -> dict:
+    """规划节点：更新档案并写入 ``plan`` / LLM 计数。"""
     agent = _get_agent("planner", PlannerAgent)
     profile = state.get("profile") or UserProfile()
     rule_plan = agent._rule_based_plan(state["query"], profile)
@@ -33,12 +35,14 @@ def planner_node(state: HealthState) -> dict:
 
 
 def retriever_node(state: HealthState) -> dict:
+    """检索节点：写入 ``retrieved_chunks``。"""
     agent = _get_agent("retriever", RetrieverAgent)
     chunks = agent.run(query=state["query"], plan=state["plan"])
     return {"retrieved_chunks": chunks}
 
 
 def calculator_node(state: HealthState) -> dict:
+    """计算节点：写入 ``calculation_results``。"""
     agent = _get_agent("calculator", CalculatorAgent)
     profile = state.get("profile") or UserProfile()
     results = agent.run(profile=profile, plan=state["plan"])
@@ -56,6 +60,7 @@ def parallel_fetch_node(state: HealthState) -> dict:
 
 
 def generator_node(state: HealthState) -> dict:
+    """生成节点：写入 ``generator_output``。"""
     agent = _get_agent("generator", GeneratorAgent)
     output = agent.run(
         query=state["query"],
@@ -71,6 +76,7 @@ def generator_node(state: HealthState) -> dict:
 
 
 def reviewer_node(state: HealthState) -> dict:
+    """评审节点：写入评审结果；失败时递增 ``review_retries``。"""
     agent = _get_agent("reviewer", ReviewerAgent)
     gen = state.get("generator_output")
     answer = gen.answer if gen else ""

@@ -13,6 +13,11 @@ from health_assistant.utils.llm_factory import invoke_llm_json
 
 
 class ReviewerAgent(BaseAgent):
+    """评审 Agent：核验免责声明与蛋白质等数值一致性。
+
+    默认规则通过即 pass；仅 ``REVIEWER_USE_LLM=always`` 时再调 LLM。
+    """
+
     prompt_name = "reviewer"
 
     def run(
@@ -22,6 +27,7 @@ class ReviewerAgent(BaseAgent):
         chunks: list[RetrievedChunk],
         calculations: Optional[CalculationResults],
     ) -> ReviewerOutput:
+        """对生成答案做规则（及可选 LLM）评审。"""
         issues = self._rule_based_checks(answer, calculations, query)
         if issues:
             return ReviewerOutput(verdict="fail", feedback="; ".join(issues), issues=issues)
@@ -84,6 +90,7 @@ class ReviewerAgent(BaseAgent):
         calculations: Optional[CalculationResults],
         query: str = "",
     ) -> list[str]:
+        """规则门禁：免责声明缺失或蛋白质数值严重偏离则 fail。"""
         issues = []
         if "医疗建议" not in answer and "仅供参考" not in answer:
             issues.append("缺少免责声明")

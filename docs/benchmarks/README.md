@@ -1,38 +1,35 @@
-# 性能基准测试说明
+# 评测与基准报告
 
-本目录存放各版本的 RAG 与端到端性能报告，用于 **优化前后对比**。
+基于当前代码与实测结果的索引。核心数字见根目录 [README](../../README.md)。
 
-## 文件说明
+## 成本可控评测（推荐）
 
-| 文件 | 说明 |
-|------|------|
-| `mvp_baseline_report.md` | MVP 版本可读报告 |
-| `mvp_baseline.json` | MVP 版本机器可读原始数据 |
-| `rag_eval_latest.json` | 最近一次 RAG 评估结果 |
-
-## 复现 MVP 基线
+| 阶段 | 范围 | 成本 |
+|------|------|------|
+| 检索 | **50 条全量** Recall@K / MRR | 仅 Embedding |
+| RAGAS-lite | 默认 **8 条抽样** Faithfulness / Relevancy / Context Precision | 每条约 2 次短 LLM 调用 |
 
 ```bash
-python main.py ingest
+python main.py eval-suite
+# 或
+python scripts/run_eval_suite.py --llm-sample 8
+
+# 最低成本（无 LLM）
+python scripts/run_eval_suite.py --skip-llm
+```
+
+输出：
+- `eval_v1_cost_controlled.json`
+- `eval_v1_cost_controlled_report.md`
+
+## 优化前后 E2E 对比
+
+```bash
 python main.py benchmark
 ```
 
-## 核心对比指标
+含 E2E 延迟、LLM 次数、评审 pass 率（见 `mvp_vs_optimized_v1_report.md`）。
 
-| 类别 | 指标 |
-|------|------|
-| RAG | Recall@1 / @3 / @5、MRR、平均检索延迟 |
-| E2E | 多 Agent 全链路平均/最大延迟 |
-| 质量 | pytest 通过数、评审 pass/fail |
+## 数据集
 
-## 优化后如何对比
-
-1. 完成优化（如重排序、并行节点、ChatService 单例等）
-2. 再次运行 `python main.py benchmark`
-3. 将输出保存为 `docs/benchmarks/optimized_v1_report.md`（手动复制或改脚本版本标签）
-4. 对比 `mvp_baseline_report.md` 与新版报告
-
-## 评估数据集
-
-- 路径：[tests/fixtures/eval_queries.json](../tests/fixtures/eval_queries.json)
-- 15 条标注 query，按 `expected_sources` / `expected_doc_type` 判定命中
+[tests/fixtures/eval_queries.json](../../tests/fixtures/eval_queries.json) — 50 条，覆盖增肌/减脂/热量/宏量/补水/食物/个性化等场景。
