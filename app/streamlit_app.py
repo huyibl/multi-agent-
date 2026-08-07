@@ -8,6 +8,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "src"))
 
+# Chroma 依赖较新 SQLite：必须在 import chromadb 之前打补丁
+from config.sqlite_patch import apply_sqlite_patch
+
+apply_sqlite_patch()
+
 import streamlit as st
 
 # 必须是第一个 Streamlit 命令，否则会触发 SessionInfo 未初始化
@@ -17,9 +22,14 @@ st.set_page_config(
     layout="wide",
 )
 
-from config.bootstrap import apply_streamlit_secrets, is_streamlit_cloud
+from config.bootstrap import (
+    apply_streamlit_secrets,
+    is_streamlit_cloud,
+    prepare_runtime,
+)
 
 apply_streamlit_secrets()
+prepare_runtime()
 os.environ.setdefault("ANONYMIZED_TELEMETRY", "False")
 os.environ.setdefault("EMBEDDING_PROVIDER", "dashscope")
 

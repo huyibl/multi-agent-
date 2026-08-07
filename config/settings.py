@@ -83,9 +83,12 @@ class Settings(BaseSettings):
 def get_settings() -> Settings:
     """返回缓存的配置实例。"""
     try:
-        from config.bootstrap import apply_streamlit_secrets
+        from config.bootstrap import apply_streamlit_secrets, prepare_runtime
+        from config.sqlite_patch import apply_sqlite_patch
 
+        apply_sqlite_patch()
         apply_streamlit_secrets()
+        prepare_runtime()
     except Exception:
         pass
     return Settings()

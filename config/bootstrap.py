@@ -1,9 +1,15 @@
-"""启动引导：将 Streamlit Secrets 注入环境变量，供 Settings 读取。"""
+"""启动引导：Secrets 注入、Cloud 路径与 SQLite 补丁。"""
 
 from __future__ import annotations
 
 import os
+import shutil
 from pathlib import Path
+
+from config.sqlite_patch import apply_sqlite_patch
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+CLOUD_CHROMA_DIR = Path("/tmp/chroma_health")
 
 SECRET_ENV_KEYS = (
     "DEEPSEEK_API_KEY",
@@ -92,3 +98,40 @@ def is_streamlit_cloud() -> bool:
     if cwd.startswith("/mount/src"):
         return True
     return False
+
+
+def configure_cloud_chroma():
+    """Cloud 上将向量库落到可写的 ``/tmp``，并尝试从仓库预构建库 seed。
+
+    Returns:
+        生效的 Chroma 目录；非 Cloud 返回 ``None``。
+    """
+    apply_sqlite_patch()
+    if not is_streamlit_cloud():
+        return None
+
+    # 允许 Secrets / 环境变量覆盖
+    if os.environ.get("CHROMA_PERSIST_DIR"):
+        path = Path(os.environ["CHROMA_PERSIST_DIR"])
+        path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    dest = CLOUD_CHROMA_DIR
+    dest.mkdir(parents=True, exist_ok=True)
+    src = PROJECT_ROOT / "data" / "chroma"
+    marker = dest / "chroma.sqlite3"
+    # 首次启动：把仓库里的预构建库拷到 /tmp（源码挂载可能不适合写）
+    if not marker.exists() and (src / "chroma.sqlite3").exists():
+        try:
+            shutil.copytree(src, dest, dirs_exist_ok=True)
+        except Exception:
+            pass
+
+    os.environ["CHROMA_PERSIST_DIR"] = str(dest)
+    return dest
+
+
+def prepare_runtime() -> None:
+    """应用启动时调用：SQLite 补丁 + Cloud Chroma 路径。"""
+    apply_sqlite_patch()
+    configure_cloud_chroma()

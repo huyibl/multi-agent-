@@ -17,7 +17,7 @@ python main.py streamlit
 
 ## Streamlit Cloud
 
-1. 提交预构建 `data/chroma/`（约 1–2MB）
+1. 仓库含 `runtime.txt`（Python 3.11）与 `pysqlite3-binary`（修复 Cloud SQLite）
 2. Main file：`app/streamlit_app.py`
 3. Secrets（参考 `.streamlit/secrets.toml.example`）：
 
@@ -31,6 +31,8 @@ ANONYMIZED_TELEMETRY = "False"
 ```
 
 **不要**在 Cloud 使用 `EMBEDDING_PROVIDER=local`（需下载 bge-m3）。
+
+Cloud 会将向量库落到 `/tmp/chroma_health`（可写）；首次自动从 `data/chroma/` seed。若仍报 `default_tenant`，用 `?admin=1` 重建向量库。
 
 本地无 `secrets.toml` 时，`config/bootstrap.py` 会跳过 Secrets，继续读 `.env`。
 
@@ -56,5 +58,6 @@ python main.py benchmark           # E2E 对比
 | 现象 | 处理 |
 |------|------|
 | SecretsNotFound 本地报错 | 已修复：无 toml 时跳过；请用最新 `bootstrap.py` |
-| Chroma panic | `python main.py ingest` 重建（或带 reset 脚本） |
+| `default_tenant` / Chroma ValueError | 确认 `runtime.txt`=3.11、已装 `pysqlite3-binary`；Reboot 后 `?admin=1` 重建 |
+| Chroma panic（本地） | `python main.py ingest` 重建 |
 | streamlit/starlette 冲突 | 保持 `streamlit<1.45`、`fastapi==0.115.9` |
