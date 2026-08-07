@@ -10,7 +10,7 @@ RAG + 多 Agent（LangGraph）健身/营养咨询系统。对话优先：身高�
 - **5 Agent**：规划 → 检索 ∥ 计算 → 生成 → 评审（失败可重试）
 - **思考过程可视**：侧边栏展示各步是否走 LLM、耗时、来源
 - **规则优先降本**：Planner/Reviewer `auto` 模式，常见问句约 1 次 LLM
-- **私人知识库**：Chroma + 规范文档；管理员 `?admin=1` 入库
+- **私人知识库**：Chroma + 规范文档；Cloud 首次打开自动入库，访客可直接提问
 - **成本可控评测**：50 条检索全量 + RAGAS-lite 抽样
 
 ## 技术架构
@@ -65,9 +65,9 @@ python main.py streamlit                         # http://localhost:8501
 |------|------|
 | `python main.py eval-suite` | 50 检索 + 8 条 RAGAS-lite |
 | `python main.py benchmark` | E2E / 优化对比 |
-| URL `?admin=1` | 管理员重建知识库 |
+| URL `?admin=1` | 管理员强制重建（可选） |
 
-Streamlit Cloud：Main file=`app/streamlit_app.py`，Secrets 见 `.streamlit/secrets.toml.example`，详见 [部署指南](docs/deployment.md)。
+Streamlit Cloud：Main file=`app/streamlit_app.py`，Secrets 见 `.streamlit/secrets.toml.example`。首次访问自动建库，详见 [部署指南](docs/deployment.md)。
 
 ## 性能指标（实测）
 

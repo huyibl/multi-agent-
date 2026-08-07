@@ -171,14 +171,17 @@ def similarity_search(
 ) -> list[Document]:
     """在向量库中检索，可选 metadata 过滤。"""
     settings = settings or get_settings()
-    store = get_vectorstore(settings)
 
-    # Cloud 未重建时集合为空，给出明确错误
-    try:
-        if _is_cloud() and hasattr(store, "_collection"):
-            pass
-    except Exception:
-        pass
+    # Cloud 空库时懒加载入库，避免访客必须点「重建」
+    if _is_cloud():
+        try:
+            from health_assistant.services.kb_bootstrap import ensure_kb_ready
+
+            ensure_kb_ready(settings)
+        except Exception as exc:
+            logger.warning("ensure_kb_ready before search failed: %s", exc)
+
+    store = get_vectorstore(settings)
 
     if doc_types:
         filter_dict = {"doc_type": {"$in": doc_types}}

@@ -32,7 +32,7 @@ ANONYMIZED_TELEMETRY = "False"
 
 **不要**在 Cloud 使用 `EMBEDDING_PROVIDER=local`（需下载 bge-m3）。
 
-Cloud 使用 **Chroma Ephemeral（内存）**：打开 `?admin=1` 点「重建向量库」。Reboot 后需再重建一次。本地仍用 Persistent + `data/chroma/`。
+Cloud 使用 **Chroma Ephemeral（内存）**，但 **首次打开会自动从 `data/raw` 入库**（需配置 `DASHSCOPE_API_KEY`），访客无需操作。进程 Reboot 后会再自动建库一次。`?admin=1` 仅供强制重建。本地仍用 Persistent + `data/chroma/`。
 
 本地无 `secrets.toml` 时，`config/bootstrap.py` 会跳过 Secrets，继续读 `.env`。
 

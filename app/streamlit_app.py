@@ -39,16 +39,26 @@ os.environ.setdefault("EMBEDDING_PROVIDER", "dashscope")
 from app.components.chat_panel import handle_user_prompt, render_chat_history
 from app.components.source_viewer import render_source_viewer
 from config.settings import clear_settings_cache, get_settings
-from health_assistant.services.ingest_service import IngestService
+from health_assistant.services.kb_bootstrap import ensure_kb_ready, kb_status
 from health_assistant.utils.sqlite_patch import sqlite_info
 
 clear_settings_cache()
 settings = get_settings()
 
+
+@st.cache_resource(show_spinner="首次准备知识库中（约需数十秒，之后访客可直接提问）…")
+def _warm_knowledge_base() -> dict:
+    """进程级缓存：冷启动自动入库，访客无需点重建。"""
+    return ensure_kb_ready()
+
+
 try:
     admin_mode = st.query_params.get("admin") == "1"
 except Exception:
     admin_mode = False
+
+# Cloud / 本地均可预热；已有库则秒级返回
+kb_info = _warm_knowledge_base()
 
 # ---------- 侧边栏：档案 + 思考过程 ----------
 with st.sidebar:
@@ -81,6 +91,10 @@ with st.sidebar:
     )
     if is_streamlit_cloud():
         st.caption("运行环境: Streamlit Cloud")
+    if kb_info.get("ready"):
+        st.caption(f"知识库: 已就绪（{kb_info.get('stored', 0)} 条）")
+    else:
+        st.caption(f"知识库: 未就绪 — {kb_info.get('error') or '请检查 Embedding Key'}")
     st.caption("免责声明：仅供健身营养参考，不构成医疗建议。")
 
 # ---------- 主区：标题 + 消息列表 ----------
@@ -97,8 +111,8 @@ if admin_mode:
     with tab_kb:
         st.subheader("私人知识库入库")
         st.write(
-            "Cloud 使用内存向量库：每次 **Reboot 后需重新点重建**；"
-            "成功或失败都会显示在按钮下方。"
+            "正常访客打开页面会 **自动入库**，无需操作。"
+            " 此处仅用于强制重建（例如更新了 `data/raw`）。"
         )
         st.caption(
             f"模式: `{'Ephemeral(Cloud)' if is_streamlit_cloud() else 'Persistent'}` | "
@@ -109,29 +123,28 @@ if admin_mode:
             f"SQLite: {info.get('sqlite_version')} | pysqlite3 补丁: "
             f"{'已启用' if info.get('patched') else '未启用'}"
         )
+        st.caption(f"当前状态: {kb_status()}")
 
-        if st.button("重建向量库", type="primary"):
+        if st.button("强制重建向量库", type="primary"):
             with st.spinner("正在入库..."):
                 try:
-                    result = IngestService().run()
-                    if result.get("stored", 0) <= 0:
+                    _warm_knowledge_base.clear()
+                    result = ensure_kb_ready(force=True)
+                    if not result.get("ready"):
                         st.session_state["ingest_feedback"] = {
                             "ok": False,
-                            "text": (
-                                f"入库未写入数据：加载 {result.get('loaded', 0)} 页，"
-                                f"切块 {result.get('chunks', 0)}。"
-                                " 请确认仓库中存在 `data/raw/` 文档。"
-                            ),
+                            "text": f"重建失败：{result.get('error') or result}",
                         }
                     else:
                         st.session_state["ingest_feedback"] = {
                             "ok": True,
                             "text": (
-                                f"重建成功：加载 {result['loaded']} 页，"
-                                f"生成 {result['chunks']} 块，存储 {result['stored']} 条。"
-                                f" 路径: {settings.chroma_persist_dir}"
+                                f"重建成功：加载 {result.get('loaded', '?')} 页，"
+                                f"切块 {result.get('chunks', '?')}，"
+                                f"存储 {result.get('stored', 0)} 条。"
                             ),
                         }
+                    _warm_knowledge_base()
                 except Exception as exc:
                     st.session_state["ingest_feedback"] = {
                         "ok": False,
