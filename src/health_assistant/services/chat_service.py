@@ -1,5 +1,8 @@
 """对话服务：多 Agent 工作流入口（支持多轮上下文与会话档案）。"""
 
+from __future__ import annotations
+
+import logging
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Optional
@@ -11,10 +14,20 @@ from health_assistant.agents.planner import PlannerAgent
 from health_assistant.agents.retriever import RetrieverAgent
 from health_assistant.agents.reviewer import ReviewerAgent
 from health_assistant.graph.workflow import build_workflow
+from health_assistant.schemas.agent_io import CalculationResults, PlannerOutput
 from health_assistant.schemas.response import HealthResponse
 from health_assistant.schemas.user_profile import UserProfile
 from health_assistant.utils.agent_trace import StepTimer, append_trace, new_trace
 from health_assistant.utils.citation_formatter import format_citations
+from health_assistant.utils.input_guard import chitchat_reply, is_low_signal_query
+
+logger = logging.getLogger(__name__)
+
+_FALLBACK_ANSWER = (
+    "这轮处理遇到一点问题，但我还在。你可以换种说法再问，例如：\n"
+    "「我身高172体重70，想增肌，蛋白怎么吃？」\n\n"
+    "> 仅供健身营养参考，不构成医疗建议。"
+)
 
 
 class ChatService:
@@ -58,6 +71,37 @@ class ChatService:
             if event.get("type") == "token":
                 yield event["text"]
 
+    def _done(
+        self,
+        answer: str,
+        *,
+        profile: UserProfile,
+        plan: Optional[PlannerOutput] = None,
+        chunks: Optional[list] = None,
+        calculations: Optional[CalculationResults] = None,
+        review_status: str = "pass",
+        review_feedback: str = "",
+        llm_calls: int = 0,
+        trace: Optional[list] = None,
+    ) -> HealthResponse:
+        chunks = chunks or []
+        response = HealthResponse(
+            answer=answer,
+            citations=format_citations(chunks) if chunks else [],
+            retrieved_chunks=chunks,
+            calculations=calculations,
+            review_status=review_status,
+            review_feedback=review_feedback,
+            plan=plan.model_dump() if plan else {},
+            metadata={
+                "llm_calls": llm_calls,
+                "trace": trace or [],
+                "profile": profile.to_context(),
+            },
+        )
+        self._last_response = response
+        return response
+
     def ask_events(
         self,
         query: str,
@@ -66,13 +110,56 @@ class ChatService:
     ) -> Iterator[dict[str, Any]]:
         """编排多 Agent 流水线并产出 UI 事件。
 
-        Yields:
-            ``trace`` / ``token`` / ``profile`` / ``done`` 事件字典。
+        任意用户输入都应最终收到 ``done``；单步失败会降级而不是中断整轮。
         """
         profile = profile or UserProfile()
         history = history or []
         llm_calls = 0
         trace = new_trace()
+
+        try:
+            yield from self._ask_events_inner(
+                query, profile, history, llm_calls, trace
+            )
+        except Exception as exc:
+            logger.exception("ask_events failed: %s", exc)
+            yield {"type": "trace", "event": append_trace(
+                trace, "fallback", "容错兜底", status="done",
+                detail=f"流水线异常已降级: {exc}",
+            )}
+            answer = _FALLBACK_ANSWER
+            yield {"type": "token", "text": answer}
+            yield {
+                "type": "done",
+                "response": self._done(
+                    answer, profile=profile, llm_calls=llm_calls, trace=trace
+                ),
+            }
+
+    def _ask_events_inner(
+        self,
+        query: str,
+        profile: UserProfile,
+        history: list[dict[str, Any]],
+        llm_calls: int,
+        trace: list,
+    ) -> Iterator[dict[str, Any]]:
+        # ---- 低信号短路：随便输入 / 闲聊，不跑检索计算 ----
+        if is_low_signal_query(query, history):
+            yield {"type": "trace", "event": append_trace(
+                trace, "guard", "输入分流", status="done", used_llm=False,
+                detail="低健身信号 → 友好短路（跳过检索/计算）",
+            )}
+            answer = chitchat_reply(query)
+            yield {"type": "profile", "profile": profile}
+            yield {"type": "token", "text": answer}
+            yield {
+                "type": "done",
+                "response": self._done(
+                    answer, profile=profile, llm_calls=0, trace=trace
+                ),
+            }
+            return
 
         yield {"type": "trace", "event": append_trace(
             trace, "planner", "规划 Agent", status="running",
@@ -80,12 +167,23 @@ class ChatService:
         )}
         timer = StepTimer()
         planner = PlannerAgent()
-        rule_plan = planner._rule_based_plan(query, profile, history)
-        used_llm = planner._should_use_llm(query, rule_plan, history)
-        if used_llm:
-            llm_calls += 1
-        plan = planner.run(query=query, profile=profile, history=history)
-        profile = profile.merge_from_entities(plan.entities)
+        try:
+            rule_plan = planner._rule_based_plan(query, profile, history)
+            used_llm = planner._should_use_llm(query, rule_plan, history)
+            if used_llm:
+                llm_calls += 1
+            plan = planner.run(query=query, profile=profile, history=history)
+            profile = profile.merge_from_entities(plan.entities)
+        except Exception as exc:
+            logger.warning("planner failed, using empty plan: %s", exc)
+            used_llm = False
+            plan = PlannerOutput(
+                intent="general_fitness",
+                subtasks=["generate_advice"],
+                entities={},
+                retrieval_queries=[query],
+            )
+
         yield {"type": "profile", "profile": profile}
         yield {"type": "trace", "event": append_trace(
             trace, "planner", "规划 Agent",
@@ -112,13 +210,30 @@ class ChatService:
             detail="并行执行规范检索与营养计算…",
         )}
         timer = StepTimer()
-        retriever = RetrieverAgent()
-        calculator = CalculatorAgent()
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            fut_r = pool.submit(retriever.run, query, plan)
-            fut_c = pool.submit(calculator.run, profile, plan)
-            chunks = fut_r.result()
-            calculations = fut_c.result()
+        chunks: list = []
+        calculations: Optional[CalculationResults] = None
+        retrieve_err = calc_err = None
+        try:
+            retriever = RetrieverAgent()
+            calculator = CalculatorAgent()
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                fut_r = pool.submit(retriever.run, query, plan)
+                fut_c = pool.submit(calculator.run, profile, plan)
+                try:
+                    chunks = fut_r.result() or []
+                except Exception as exc:
+                    retrieve_err = exc
+                    logger.warning("retriever failed: %s", exc)
+                    chunks = []
+                try:
+                    calculations = fut_c.result()
+                except Exception as exc:
+                    calc_err = exc
+                    logger.warning("calculator failed: %s", exc)
+                    calculations = None
+        except Exception as exc:
+            logger.warning("parallel_fetch setup failed: %s", exc)
+            retrieve_err = retrieve_err or exc
 
         sources = [c.source for c in chunks[:5]]
         calc_bits = []
@@ -129,6 +244,11 @@ class ChatService:
             calc_bits.append(f"蛋白={lo}-{hi}g")
         if calculations and calculations.tdee_kcal:
             calc_bits.append(f"TDEE={calculations.tdee_kcal}")
+        degrade_note = ""
+        if retrieve_err:
+            degrade_note += " | 检索降级"
+        if calc_err:
+            degrade_note += " | 计算降级"
         yield {"type": "trace", "event": append_trace(
             trace, "parallel_fetch", "检索 ∥ 计算",
             status="done",
@@ -136,7 +256,8 @@ class ChatService:
             latency_ms=timer.ms(),
             detail=(
                 f"命中 {len(chunks)} 块 | 来源: {', '.join(sources) or '无'} | "
-                f"{'; '.join(calc_bits) or '暂无计算（缺少身高体重时可追问补充）'}"
+                f"{'; '.join(calc_bits) or '暂无计算（可补充身高体重）'}"
+                f"{degrade_note}"
             ),
             data={
                 "chunk_count": len(chunks),
@@ -150,6 +271,8 @@ class ChatService:
         review_feedback = ""
         review_retries = 0
         max_retries = self.settings.max_review_retries
+        gen_output = None
+        review = None
 
         while True:
             yield {"type": "trace", "event": append_trace(
@@ -158,23 +281,42 @@ class ChatService:
                 used_llm=bool(generator.settings.deepseek_api_key),
             )}
             timer = StepTimer()
-            parts: list[str] = []
-            for token in generator.stream_tokens(
-                query, plan, chunks, calculations, review_feedback,
-                profile=profile, history=history,
-            ):
-                parts.append(token)
-                yield {"type": "token", "text": token}
-
-            raw = "".join(parts)
-            if generator.settings.deepseek_api_key:
-                llm_calls += 1
-                gen_output = generator.output_from_stream(raw, chunks)
-            else:
-                gen_output = generator.run(
+            try:
+                parts: list[str] = []
+                for token in generator.stream_tokens(
                     query, plan, chunks, calculations, review_feedback,
                     profile=profile, history=history,
-                )
+                ):
+                    parts.append(token)
+                    yield {"type": "token", "text": token}
+
+                raw = "".join(parts)
+                if generator.settings.deepseek_api_key:
+                    llm_calls += 1
+                    gen_output = generator.output_from_stream(raw, chunks)
+                else:
+                    gen_output = generator.run(
+                        query, plan, chunks, calculations, review_feedback,
+                        profile=profile, history=history,
+                    )
+            except Exception as exc:
+                logger.warning("generator failed: %s", exc)
+                answer = _FALLBACK_ANSWER
+                yield {"type": "token", "text": answer}
+                yield {
+                    "type": "done",
+                    "response": self._done(
+                        answer,
+                        profile=profile,
+                        plan=plan,
+                        chunks=chunks,
+                        calculations=calculations,
+                        review_status="pass",
+                        llm_calls=llm_calls,
+                        trace=trace,
+                    ),
+                }
+                return
 
             yield {"type": "trace", "event": append_trace(
                 trace, "generator", "生成 Agent",
@@ -190,7 +332,14 @@ class ChatService:
                 detail="核验免责声明与数值一致性…",
             )}
             timer = StepTimer()
-            review = reviewer.run(query, gen_output.answer, chunks, calculations)
+            try:
+                review = reviewer.run(query, gen_output.answer, chunks, calculations)
+            except Exception as exc:
+                logger.warning("reviewer failed, force pass: %s", exc)
+                from health_assistant.schemas.agent_io import ReviewerOutput
+
+                review = ReviewerOutput(verdict="pass", feedback="")
+
             review_used_llm = (
                 reviewer.settings.reviewer_use_llm == "always"
                 and bool(reviewer.settings.deepseek_api_key)

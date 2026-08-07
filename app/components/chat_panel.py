@@ -20,12 +20,15 @@ def _get_chat_service() -> ChatService:
 
 
 def _get_profile() -> UserProfile:
-    """读取会话档案；兼容 dict 反序列化。"""
+    """读取会话档案；兼容 dict 反序列化，脏数据不崩。"""
     if "user_profile" not in st.session_state:
         st.session_state.user_profile = UserProfile()
     profile = st.session_state.user_profile
     if isinstance(profile, dict):
-        profile = UserProfile(**profile)
+        try:
+            profile = UserProfile(**profile)
+        except Exception:
+            profile = UserProfile().merge_from_entities(profile)
         st.session_state.user_profile = profile
     return profile
 
@@ -150,7 +153,17 @@ def handle_user_prompt(prompt: str) -> None:
                     )
 
         except Exception as e:
-            st.error(f"处理失败: {e}")
+            # 兜底：任意异常也要给出助手气泡，避免只剩红条
+            fallback = (
+                "这轮没能完整处理，请换种说法再试，例如：\n"
+                "「我身高172体重70，想增肌，蛋白怎么吃？」\n\n"
+                f"（内部提示：{e}）\n\n"
+                "> 仅供健身营养参考，不构成医疗建议。"
+            )
+            st.markdown(fallback)
+            st.session_state.messages.append(
+                {"role": "assistant", "content": fallback}
+            )
 
 
 def render_chat_panel() -> None:

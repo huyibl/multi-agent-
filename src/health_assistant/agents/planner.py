@@ -6,14 +6,16 @@ from typing import Any, Optional
 
 from health_assistant.agents.base import BaseAgent
 from health_assistant.schemas.agent_io import PlannerOutput
-from health_assistant.schemas.user_profile import UserProfile
+from health_assistant.schemas.user_profile import UserProfile, sanitize_entities
 from health_assistant.utils.chat_history import format_chat_history
+from health_assistant.utils.input_guard import has_fitness_signal
 from health_assistant.utils.llm_factory import invoke_llm_json
 
 _CLEAR_INTENT_KEYWORDS = (
     "增肌", "减脂", "减肥", "减重", "蛋白", "热量", "卡路里", "kcal",
     "BMI", "bmi", "训练", "饮食", "膳食", "营养", "补水", "碳水", "脂肪",
     "muscle", "bulk", "lose", "calorie", "protein", "腹肌", "有氧", "力量",
+    "胖子", "胖", "瘦", "运动", "锻炼",
 )
 
 
@@ -53,13 +55,15 @@ class PlannerAgent(BaseAgent):
         else:
             data = rule_plan
 
+        # LLM/规则实体统一清洗，避免离谱数值进入下游
+        entities = sanitize_entities(data.get("entities") or {})
         return PlannerOutput(
             intent=data.get("intent", "general_fitness"),
             subtasks=data.get(
                 "subtasks",
                 ["retrieve_guideline", "calc_metrics", "generate_advice"],
             ),
-            entities=data.get("entities", {}),
+            entities=entities,
             retrieval_queries=data.get(
                 "retrieval_queries",
                 self._default_retrieval_queries(query),
@@ -97,6 +101,8 @@ class PlannerAgent(BaseAgent):
 
     def _is_clear_intent(self, query: str, rule_plan: dict[str, Any]) -> bool:
         """问句是否含明确健身/营养关键词，可跳过 Planner LLM。"""
+        if has_fitness_signal(query):
+            return True
         q = query.lower()
         if any(kw.lower() in q or kw in query for kw in _CLEAR_INTENT_KEYWORDS):
             return True
@@ -126,27 +132,36 @@ class PlannerAgent(BaseAgent):
         )
         if any(k in text for k in ("增肌", "muscle", "bulk", "蛋白", "腹肌")):
             intent = "muscle_gain_nutrition"
-        elif any(k in text for k in ("减肥", "减重", "lose", "减脂")):
+        elif any(k in text for k in ("减肥", "减重", "lose", "减脂", "胖子", "胖")):
             intent = "weight_loss"
         elif any(k in query for k in ("热量", "卡路里", "kcal", "TDEE")):
             intent = "calorie_nutrition"
-        elif any(k in query for k in ("训练", "有氧", "力量", "动作")):
+        elif any(k in query for k in ("训练", "有氧", "力量", "动作", "锻炼", "运动")):
             intent = "training_advice"
 
+        if any(k in query for k in ("不活动", "久坐", "躺平")):
+            entities["activity_level"] = "sedentary"
+
+        clean_ent = sanitize_entities(entities)
         return {
             "intent": intent,
             "subtasks": ["retrieve_guideline", "calc_metrics", "generate_advice"],
-            "entities": {**merged.to_context(), **entities},
+            "entities": {**merged.to_context(), **clean_ent},
             "retrieval_queries": self._default_retrieval_queries(query),
         }
 
     def _extract_entities(self, query: str) -> dict[str, Any]:
-        """用正则从自然语言中抽取身高/体重/年龄/性别/目标。"""
+        """用正则从自然语言中抽取身高/体重/年龄/性别/目标（再经 sanitize）。"""
         entities: dict[str, Any] = {}
-        height = re.search(r"身高\s*(\d{2,3})|(\d{2,3})\s*cm", query, re.I)
+        # 要求「身高/体重」字样或单位，避免从闲聊数字误抽
+        height = re.search(r"身高\s*(\d{2,3})(?:\s*cm)?|(\d{2,3})\s*cm", query, re.I)
         if height:
             entities["height_cm"] = float(height.group(1) or height.group(2))
-        weight = re.search(r"体重\s*(\d{2,3}(?:\.\d+)?)|(\d{2,3}(?:\.\d+)?)\s*kg", query, re.I)
+        weight = re.search(
+            r"体重\s*(\d{2,3}(?:\.\d{1,2})?)(?:\s*kg)?|(\d{2,3}(?:\.\d{1,2})?)\s*kg",
+            query,
+            re.I,
+        )
         if weight:
             entities["weight_kg"] = float(weight.group(1) or weight.group(2))
         age = re.search(r"年龄\s*(\d{1,3})|(\d{1,3})\s*岁", query)
@@ -158,9 +173,9 @@ class PlannerAgent(BaseAgent):
             entities["sex"] = "female"
         if "增肌" in query or "腹肌" in query:
             entities["goal"] = "muscle_gain"
-        if "减肥" in query or "减重" in query or "减脂" in query:
+        if "减肥" in query or "减重" in query or "减脂" in query or "胖子" in query:
             entities["goal"] = "lose_weight"
-        return entities
+        return sanitize_entities(entities)
 
     def _default_retrieval_queries(self, query: str) -> list[str]:
         """默认检索 Query：直接使用用户原问句。"""
